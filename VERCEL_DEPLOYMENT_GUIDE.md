@@ -69,9 +69,9 @@ PostGress_Project/
 3. In **Root Directory**, click **Edit** and select `frontend`.
 4. Framework Preset will be automatically detected as **Vite**.
 5. Under **Environment Variables**, configure:
-   - `VITE_ADMIN_API_URL`: `https://my-admin-app.vercel.app/api/v1`
+   - `VITE_ADMIN_API_URL`: `https://team-ops-admin.vercel.app/api/v1`
    - `VITE_BACKEND_API_URL`: `https://my-backend-app.vercel.app/api/v1`
-   - `VITE_LEAVE_API_URL`: `https://my-admin-app.vercel.app/leave`
+   - `VITE_LEAVE_API_URL`: `https://team-ops-admin.vercel.app/leave`
 6. Click **Deploy**.
 
 ---
