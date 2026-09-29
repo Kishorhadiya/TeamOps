@@ -18,12 +18,16 @@ app.set("trust proxy", 1);
 DBConnect();
 
 // Enable CORS for frontend requests
-app.use(cors({
+const corsOptions = {
   origin: true,
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
-}));
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie", "Accept", "X-Requested-With"]
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
 
 // Apply global rate limiting to all requests
 app.use(globalLimiter);
