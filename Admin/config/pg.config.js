@@ -5,7 +5,7 @@ const pool = new pg.Pool({
   connectionString: process.env.PG_URL,
   ssl: process.env.PG_URL && !process.env.PG_URL.includes("localhost")
     ? { rejectUnauthorized: false }
-    : false
+    : false,
 });
 
 export const DBConnect = async () => {
@@ -14,7 +14,7 @@ export const DBConnect = async () => {
     console.log("Connected to PostgreSQL database successfully");
     client.release();
   } catch (error) {
-    console.log("PostgreSQL connection error:", error.message);
+    console.error("PostgreSQL connection error:", error.message);
   }
 };
 
