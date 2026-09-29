@@ -42,6 +42,7 @@ PostGress_Project/
    - `PG_URL`: `your_postgresql_connection_string`
    - `TOKEN_1`: `your_jwt_secret_token`
    - `PORT`: `3001`
+   - `FRONTEND_URL`: `https://your-frontend-app.vercel.app,http://localhost:5173`
 5. Click **Deploy**.
 6. Note down the deployed URL (e.g., `https://my-backend-app.vercel.app`).
 
@@ -56,6 +57,7 @@ PostGress_Project/
    - `TOKEN_1`: `your_jwt_access_token_secret`
    - `REFRESH_SECRET`: `your_jwt_refresh_token_secret`
    - `PORT`: `8000`
+   - `FRONTEND_URL`: `https://your-frontend-app.vercel.app,http://localhost:5173`
 5. Click **Deploy**.
 6. Note down the deployed URL (e.g., `https://my-admin-app.vercel.app`).
 

@@ -1,6 +1,9 @@
+import "dotenv/config";
 import pool from "../config/pg.config.js";
 
-const isUUID = (str) => typeof str === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+const isUUID = (str) =>
+  typeof str === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
 
 export const leaveApproveController = async (req, res) => {
   try {
@@ -8,36 +11,42 @@ export const leaveApproveController = async (req, res) => {
 
     const targetLeaveId = id || leaveid;
     const validAdminId = isUUID(adminid) ? adminid : null;
+    const leaveStatus = status || "Approved";
 
     let result;
     if (isUUID(targetLeaveId)) {
       result = await pool.query(
         "UPDATE leave SET status = $1, approveid = $2 WHERE id = $3 RETURNING *",
-        [status, validAdminId, targetLeaveId]
+        [leaveStatus, validAdminId, targetLeaveId]
       );
     } else if (isUUID(userid)) {
       result = await pool.query(
         "UPDATE leave SET status = $1, approveid = $2 WHERE userid = $3 RETURNING *",
-        [status, validAdminId, userid]
+        [leaveStatus, validAdminId, userid]
+      );
+    } else if (targetLeaveId) {
+      result = await pool.query(
+        "UPDATE leave SET status = $1, approveid = $2 WHERE id::text = $3 RETURNING *",
+        [leaveStatus, validAdminId, String(targetLeaveId)]
       );
     } else {
       result = await pool.query(
-        "UPDATE leave SET status = $1, approveid = $2 WHERE id::text = $3 OR userid::text = $4 RETURNING *",
-        [status, validAdminId, String(targetLeaveId || ''), String(userid || '')]
+        "UPDATE leave SET status = $1, approveid = $2 WHERE userid::text = $3 RETURNING *",
+        [leaveStatus, validAdminId, String(userid || "")]
       );
     }
 
     if (!result || result.rowCount === 0) {
-      return res.status(400).json({ message: "leave not updated" });
+      return res.status(404).json({ message: "Leave record not found or not updated" });
     }
 
     return res.status(200).json({
-      message: "leave updated successfully",
+      message: `Leave status updated to ${leaveStatus} successfully`,
       data: result.rows[0],
     });
   } catch (error) {
     console.error("leaveApproveController error:", error);
-    return res.status(500).json({ message: "internal server error", error: error.message });
+    return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
 
@@ -45,48 +54,73 @@ export const AllLeave = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
-        u.id          AS userid,
-        u.username,
-        u.email,
         l.id          AS leaveid,
+        l.id          AS id,
         l.startdate   AS fromdate,
         l.enddate     AS todate,
         l.status,
-        l.reason
-       FROM users u
-       LEFT JOIN leave l ON u.id = l.userid
-       ORDER BY l.startdate DESC NULLS LAST`
+        l.reason,
+        l.userid,
+        l.approveid,
+        COALESCE(u.username, 'Employee') AS username,
+        COALESCE(u.email, 'employee@company.com') AS email
+       FROM leave l
+       LEFT JOIN users u ON l.userid = u.id
+       ORDER BY l.startdate DESC NULLS LAST, l.id DESC`
     );
+
     return res.status(200).json({
-      message: "Leave Fetched",
+      message: "Leaves fetched successfully",
       AllLeave: result.rows,
     });
   } catch (error) {
     console.error("AllLeave query error:", error.message);
-    return res.status(500).json({ message: "internal server error", error: error.message });
+    return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
 
 export const leaveApproveHistory = async (req, res) => {
   try {
-    const { adminid, userid, status, leaveid } = req.body;
+    const { adminid, userid, status, leaveid, id } = req.body;
 
+    const targetLeaveId = leaveid || id;
     const validAdminId = isUUID(adminid) ? adminid : null;
+    const leaveStatus = status || "Approved";
 
-    const Approve = await pool.query(
-      "UPDATE leave SET status = $1, approveid = $2 WHERE userid = $3 AND id = $4 RETURNING *",
-      [status, validAdminId, userid, leaveid]
-    );
-    if (!Approve || Approve.rowCount === 0) {
-      return res.status(400).json({ message: "leave not updated" });
+    let Approve;
+    if (isUUID(targetLeaveId)) {
+      Approve = await pool.query(
+        "UPDATE leave SET status = $1, approveid = $2 WHERE id = $3 RETURNING *",
+        [leaveStatus, validAdminId, targetLeaveId]
+      );
+    } else if (isUUID(userid) && isUUID(targetLeaveId)) {
+      Approve = await pool.query(
+        "UPDATE leave SET status = $1, approveid = $2 WHERE userid = $3 AND id = $4 RETURNING *",
+        [leaveStatus, validAdminId, userid, targetLeaveId]
+      );
+    } else if (isUUID(userid)) {
+      Approve = await pool.query(
+        "UPDATE leave SET status = $1, approveid = $2 WHERE userid = $3 RETURNING *",
+        [leaveStatus, validAdminId, userid]
+      );
+    } else {
+      Approve = await pool.query(
+        "UPDATE leave SET status = $1, approveid = $2 WHERE id::text = $3 OR userid::text = $4 RETURNING *",
+        [leaveStatus, validAdminId, String(targetLeaveId || ""), String(userid || "")]
+      );
     }
+
+    if (!Approve || Approve.rowCount === 0) {
+      return res.status(404).json({ message: "Leave record not found" });
+    }
+
     return res.status(200).json({
-      message: "leave updated successfully",
+      message: "Leave updated successfully",
       data: Approve.rows[0],
     });
   } catch (error) {
     console.error("leaveApproveHistory error:", error);
-    return res.status(500).json({ message: "internal server error", error: error.message });
+    return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
 
@@ -99,16 +133,18 @@ export const getDashboardStats = async (req, res) => {
       const userRes = await pool.query("SELECT COUNT(*) FROM users");
       activeEmployees = parseInt(userRes.rows[0]?.count || 0, 10);
     } catch (err) {
-      activeEmployees = 6;
+      console.warn("User count error:", err.message);
+      activeEmployees = 1;
     }
 
     try {
       const leaveRes = await pool.query(
-        "SELECT COUNT(*) FROM leave WHERE status ILIKE 'Pending'"
+        "SELECT COUNT(*) FROM leave WHERE LOWER(COALESCE(status, 'pending')) = 'pending'"
       );
       pendingLeave = parseInt(leaveRes.rows[0]?.count || 0, 10);
     } catch (err) {
-      pendingLeave = 3;
+      console.warn("Leave count error:", err.message);
+      pendingLeave = 0;
     }
 
     return res.status(200).json({
@@ -117,6 +153,6 @@ export const getDashboardStats = async (req, res) => {
       pendingLeave,
     });
   } catch (error) {
-    return res.status(500).json({ message: "internal server error", error: error.message });
+    return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };

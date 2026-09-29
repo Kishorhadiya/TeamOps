@@ -42,7 +42,7 @@ export const updateLeaveStatus = createAsyncThunk(
       const token = getState().auth.accessToken;
       await axios.post(
         `${API}/approve-leave`,
-        { adminid, userid, status },
+        { id, leaveid: id, adminid, userid, status },
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       return { id, status }; // return to update local state
